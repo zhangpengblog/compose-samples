@@ -17,7 +17,6 @@
 package com.example.compose.jetchat
 
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -26,7 +25,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -35,7 +34,6 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
 import com.example.compose.jetchat.conversation.ConversationContent
 import com.example.compose.jetchat.conversation.KeyboardShownKey
-import com.example.compose.jetchat.conversation.LocalBackPressedDispatcher
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
 import org.junit.Before
@@ -55,20 +53,14 @@ class UserInputTest {
 
     @Before
     fun setUp() {
-
         // Launch the conversation screen
-        val onBackPressedDispatcher = composeTestRule.activity.onBackPressedDispatcher
         composeTestRule.setContent {
-            CompositionLocalProvider(
-                LocalBackPressedDispatcher provides onBackPressedDispatcher
-            ) {
-                JetchatTheme {
-                    ConversationContent(
-                        uiState = exampleUiState,
-                        navigateToProfile = { },
-                        onNavIconPressed = { }
-                    )
-                }
+            JetchatTheme {
+                ConversationContent(
+                    uiState = exampleUiState,
+                    navigateToProfile = { },
+                    onNavIconPressed = { },
+                )
             }
         }
     }
@@ -141,35 +133,31 @@ class UserInputTest {
         findSendButton().assertIsEnabled()
     }
 
-    private fun clickOnTextField() =
-        composeTestRule
-            .onNodeWithContentDescription(activity.getString(R.string.textfield_desc))
-            .performClick()
+    private fun clickOnTextField() = composeTestRule
+        .onNodeWithContentDescription(activity.getString(R.string.textfield_desc))
+        .performClick()
 
-    private fun openEmojiSelector() =
-        composeTestRule
-            .onNodeWithContentDescription(
-                label = activity.getString(R.string.emoji_selector_bt_desc),
-                useUnmergedTree = true // https://issuetracker.google.com/issues/184825850
-            )
-            .performClick()
+    private fun openEmojiSelector() = composeTestRule
+        .onNodeWithContentDescription(
+            label = activity.getString(R.string.emoji_selector_bt_desc),
+            useUnmergedTree = true, // https://issuetracker.google.com/issues/184825850
+        )
+        .performClick()
 
-    private fun assertEmojiSelectorIsDisplayed() =
-        composeTestRule
-            .onNodeWithContentDescription(activity.getString(R.string.emoji_selector_desc))
-            .assertIsDisplayed()
+    private fun assertEmojiSelectorIsDisplayed() = composeTestRule
+        .onNodeWithContentDescription(activity.getString(R.string.emoji_selector_desc))
+        .assertIsDisplayed()
 
-    private fun assertEmojiSelectorDoesNotExist() =
-        composeTestRule
-            .onNodeWithContentDescription(activity.getString(R.string.emoji_selector_desc))
-            .assertDoesNotExist()
+    private fun assertEmojiSelectorDoesNotExist() = composeTestRule
+        .onNodeWithContentDescription(activity.getString(R.string.emoji_selector_desc))
+        .assertDoesNotExist()
 
     private fun findSendButton() = composeTestRule.onNodeWithText(activity.getString(R.string.send))
 
     private fun findTextInputField(): SemanticsNodeInteraction {
         return composeTestRule.onNode(
             hasSetTextAction() and
-                hasAnyAncestor(hasContentDescription(activity.getString(R.string.textfield_desc)))
+                hasAnyAncestor(hasContentDescription(activity.getString(R.string.textfield_desc))),
         )
     }
 }

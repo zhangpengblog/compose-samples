@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   Copyright 2020 The Android Open Source Project
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -76,5 +75,14 @@
     <string name="rating">Rating</string>
     <string name="alphabetical">Alphabetical</string>
     <string name="close">Close</string>
+
+    <!-- Recent Orders Widget -->
+    <string name="widget_title">Recent Jetsnack orders</string>
+    <string name="snack_order_widget_name">Jetsnack Recent Orders</string>
+    <string name="snack_order_widget_description">Quickly view and reorder your recent orders.</string>
+    <string name="shopping_cart_button_label">View shopping cart</string>
+    <string name="sample_no_data_text">No data</string>
+    <string name="sample_add_button_text">Add</string>
+    <string name="add_to_cart_content_description">Add to Shopping Cart</string>
 
 </resources>

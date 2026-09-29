@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.compose.jetchat.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -35,42 +36,37 @@ import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.theme.JetchatTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JetchatAppBar(
     modifier: Modifier = Modifier,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     onNavIconPressed: () -> Unit = { },
     title: @Composable () -> Unit,
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val backgroundColors = TopAppBarDefaults.centerAlignedTopAppBarColors()
-    val backgroundColor = backgroundColors.containerColor(
-        scrollFraction = scrollBehavior?.scrollFraction ?: 0f
-    ).value
-    val foregroundColors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-        containerColor = Color.Transparent,
-        scrolledContainerColor = Color.Transparent
+    CenterAlignedTopAppBar(
+        modifier = modifier,
+        actions = actions,
+        title = title,
+        scrollBehavior = scrollBehavior,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent,
+            scrolledContainerColor = Color.Transparent,
+        ),
+        navigationIcon = {
+            JetchatIcon(
+                contentDescription = stringResource(id = R.string.navigation_drawer_open),
+                modifier = Modifier
+                    .size(64.dp)
+                    .clickable(onClick = onNavIconPressed)
+                    .padding(16.dp),
+            )
+        },
     )
-    Box(modifier = Modifier.background(backgroundColor)) {
-        CenterAlignedTopAppBar(
-            modifier = modifier,
-            actions = actions,
-            title = title,
-            scrollBehavior = scrollBehavior,
-            colors = foregroundColors,
-            navigationIcon = {
-                JetchatIcon(
-                    contentDescription = stringResource(id = R.string.navigation_drawer_open),
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clickable(onClick = onNavIconPressed)
-                        .padding(16.dp)
-                )
-            }
-        )
-    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun JetchatAppBarPreview() {
@@ -79,6 +75,7 @@ fun JetchatAppBarPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun JetchatAppBarPreviewDark() {

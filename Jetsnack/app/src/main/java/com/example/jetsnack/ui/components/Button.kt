@@ -29,11 +29,11 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Text
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -48,7 +48,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.jetsnack.ui.theme.JetsnackTheme
 
 @Composable
-
 fun JetsnackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,7 +60,7 @@ fun JetsnackButton(
     contentColor: Color = JetsnackTheme.colors.textInteractive,
     disabledContentColor: Color = JetsnackTheme.colors.textHelp,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
-    content: @Composable RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit,
 ) {
     JetsnackSurface(
         shape = shape,
@@ -72,31 +71,31 @@ fun JetsnackButton(
             .clip(shape)
             .background(
                 Brush.horizontalGradient(
-                    colors = if (enabled) backgroundGradient else disabledBackgroundGradient
-                )
+                    colors = if (enabled) backgroundGradient else disabledBackgroundGradient,
+                ),
             )
             .clickable(
                 onClick = onClick,
                 enabled = enabled,
                 role = Role.Button,
                 interactionSource = interactionSource,
-                indication = null
-            )
+                indication = null,
+            ),
     ) {
         ProvideTextStyle(
-            value = MaterialTheme.typography.button
+            value = MaterialTheme.typography.labelLarge,
         ) {
             Row(
                 Modifier
                     .defaultMinSize(
                         minWidth = ButtonDefaults.MinWidth,
-                        minHeight = ButtonDefaults.MinHeight
+                        minHeight = ButtonDefaults.MinHeight,
                     )
-                    .indication(interactionSource, rememberRipple())
+                    .indication(interactionSource, ripple())
                     .padding(contentPadding),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
-                content = content
+                content = content,
             )
         }
     }
@@ -123,7 +122,7 @@ private fun ButtonPreview() {
 private fun RectangleButtonPreview() {
     JetsnackTheme {
         JetsnackButton(
-            onClick = {}, shape = RectangleShape
+            onClick = {}, shape = RectangleShape,
         ) {
             Text(text = "Demo")
         }

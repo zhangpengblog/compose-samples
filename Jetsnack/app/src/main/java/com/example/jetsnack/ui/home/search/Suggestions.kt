@@ -26,8 +26,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,10 +39,7 @@ import com.example.jetsnack.ui.components.JetsnackSurface
 import com.example.jetsnack.ui.theme.JetsnackTheme
 
 @Composable
-fun SearchSuggestions(
-    suggestions: List<SearchSuggestionGroup>,
-    onSuggestionSelect: (String) -> Unit
-) {
+fun SearchSuggestions(suggestions: List<SearchSuggestionGroup>, onSuggestionSelect: (String) -> Unit) {
     LazyColumn {
         suggestions.forEach { suggestionGroup ->
             item {
@@ -52,7 +49,7 @@ fun SearchSuggestions(
                 Suggestion(
                     suggestion = suggestion,
                     onSuggestionSelect = onSuggestionSelect,
-                    modifier = Modifier.fillParentMaxWidth()
+                    modifier = Modifier.fillParentMaxWidth(),
                 )
             }
             item {
@@ -63,35 +60,28 @@ fun SearchSuggestions(
 }
 
 @Composable
-private fun SuggestionHeader(
-    name: String,
-    modifier: Modifier = Modifier
-) {
+private fun SuggestionHeader(name: String, modifier: Modifier = Modifier) {
     Text(
         text = name,
-        style = MaterialTheme.typography.h6,
+        style = MaterialTheme.typography.titleLarge,
         color = JetsnackTheme.colors.textPrimary,
         modifier = modifier
             .heightIn(min = 56.dp)
             .padding(horizontal = 24.dp, vertical = 4.dp)
-            .wrapContentHeight()
+            .wrapContentHeight(),
     )
 }
 
 @Composable
-private fun Suggestion(
-    suggestion: String,
-    onSuggestionSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun Suggestion(suggestion: String, onSuggestionSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     Text(
         text = suggestion,
-        style = MaterialTheme.typography.subtitle1,
+        style = MaterialTheme.typography.titleMedium,
         modifier = modifier
             .heightIn(min = 48.dp)
             .clickable { onSuggestionSelect(suggestion) }
             .padding(start = 24.dp)
-            .wrapContentSize(Alignment.CenterStart)
+            .wrapContentSize(Alignment.CenterStart),
     )
 }
 
@@ -104,7 +94,7 @@ fun PreviewSuggestions() {
         JetsnackSurface {
             SearchSuggestions(
                 suggestions = SearchRepo.getSuggestions(),
-                onSuggestionSelect = { }
+                onSuggestionSelect = { },
             )
         }
     }

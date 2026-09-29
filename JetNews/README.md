@@ -3,37 +3,42 @@ Jetnews is a sample news reading app, built with
 [Jetpack Compose](https://developer.android.com/jetpack/compose). The goal of the sample is to
 showcase the current UI capabilities of Compose.
 
-To try out this sample app, you need to use 
-[Android Studio Arctic Fox](https://developer.android.com/studio).
+To try out this sample app, use the latest stable version
+of [Android Studio](https://developer.android.com/studio).
 You can clone this repository or import the
 project from Android Studio following the steps
 [here](https://developer.android.com/jetpack/compose/setup#sample).
 
-Screenshots
------------
-<img src="screenshots/jetnews_demo.gif" alt="Screenshot">
+## Screenshots
+
+<img src="screenshots/screenshots.png" alt="Screenshot">
 
 ## Features
 
-This sample contains three screens: a list of articles, a detail page for articles, and a page to
-subscribe to topics of interest. The navigation from the the list of articles to the interests
+This sample contains three screens: a list of posts, a detail page for a post, and a page to
+subscribe to topics of interest. The navigation from the list of posts to the interests
 screen uses a navigation drawer.
 
 ### App scaffolding
 
 Package [`com.example.jetnews.ui`][1]
 
-[`JetnewsApp.kt`][2] arranges the different screens in the `NavDrawerLayout`. 
+[`JetnewsApp.kt`][2] sets up the app's navigation state and the modal drawer used for navigation
+on smaller windows.
 
-[`JetnewsNavGraph.kt`][3] configures the navigation routes and actions in the app. 
+[`JetnewsNavDisplay.kt`][3] displays the primary content of the app: the list of posts, the
+posts themselves, and the interests page. It uses a list-detail scene strategy to adaptively
+display more or less content depending on the window size.
+
+<img src="screenshots/jetnews_all_screens.png" alt="Screenshot">
 
 [1]: app/src/main/java/com/example/jetnews/ui
 [2]: app/src/main/java/com/example/jetnews/ui/JetnewsApp.kt
-[3]: app/src/main/java/com/example/jetnews/ui/JetnewsNavGraph.kt
+[3]: app/src/main/java/com/example/jetnews/ui/JetnewsNavDisplay.kt
 
-### Main article list
+### Main post list
 
-Package [`com.example.jetnews.ui.home`][3]
+Package [`com.example.jetnews.ui.home`][4]
 
 This screen shows how to create different custom Composable functions and combine them in a list
 that scrolls vertically and horizontally.
@@ -41,36 +46,52 @@ that scrolls vertically and horizontally.
 See how to:
 
 * Use `Row`s and `Column`s to arrange the contents of the UI
-* Add an `AppBar`
-* Use `MaterialTypography` and opacity to style the text
-* Use `Shape` to round the corners of the images
-* Use elevation to make the `Card`s stand out from the background
+* Add a top app bar that elevates as the user scrolls
+* Use Material's `Typography` and `ColorScheme` to style the text
+* Use tonal elevation to make the `Card`s stand out from the background
 
-[3]: app/src/main/java/com/example/jetnews/ui/home
+[4]: app/src/main/java/com/example/jetnews/ui/home
 
-### Article detail
+### Post detail
 
-Package [`com.example.jetnews.ui.article`][4]
+Package [`com.example.jetnews.ui.post`][5]
 
 This screen dives into the Text API, showing how to use different fonts than the ones defined in
-[`Typograhy`][5]. It also adds a bottom appbar, with custom actions.
+[`Typography`][6]. It also adds a bottom app bar, with custom actions.
 
-[4]: app/src/main/java/com/example/jetnews/ui/article
-[5]: app/src/main/java/com/example/jetnews/ui/theme/Type.kt
+[5]: app/src/main/java/com/example/jetnews/ui/post
+[6]: app/src/main/java/com/example/jetnews/ui/theme/Type.kt
 
 ### Interests screen
 
-Package [`com.example.jetnews.ui.interests`][6]
+Package [`com.example.jetnews.ui.interests`][7]
 
 This screens shows how to use Tabs and switch content depending on the selected tab. It
-also includes a custom checkbox button, [SelectTopicButton][7]
+also includes a custom checkbox button, [SelectTopicButton][8]
 that uses a `Toggleable` composable function to provide
 the on/off behaviour and semantics, while drawing a custom UI. The UI of the button is partly
 drawn with low-level primitives and partly overlaying images. See also how to visualize
 on and off, light and dark version in the Android Studio Preview.
 
-[6]: app/src/main/java/com/example/jetnews/ui/interests
-[7]: app/src/main/java/com/example/jetnews/ui/interests/SelectTopicButton.kt
+[7]: app/src/main/java/com/example/jetnews/ui/interests
+[8]: app/src/main/java/com/example/jetnews/ui/interests/SelectTopicButton.kt
+
+### AppWidget powered by Glance
+
+Package [`com.example.jetnews.glance`][9]
+
+This package shows how to use Glance and write compose style code for AppWidgets.
+
+See how to:
+* Use `Row`, `Column`, `LazyColumn` to arrange the contents of the UI
+* Use a repository from your existing app to load data for the widget and perform updates
+* Configure `android:updatePeriodMillis` to periodically refresh the widget
+* Use `androidx.glance:glance-material3` library to create a custom color scheme with `GlanceTheme`
+and use dynamic colors when supported
+* Tint `Image`s to match the color scheme
+* Launch an activity on click using `actionStartActivity`
+
+[9]: app/src/main/java/com/example/jetnews/glance
 
 ### Data
 

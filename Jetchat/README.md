@@ -4,8 +4,8 @@
 
 Jetchat is a sample chat app built with [Jetpack Compose][compose].
 
-To try out this sample app, you need to use 
-[Android Studio Arctic Fox](https://developer.android.com/studio)
+To try out this sample app, use the latest stable version
+of [Android Studio](https://developer.android.com/studio).
 You can clone this repository or import the
 project from Android Studio following the steps
 [here](https://developer.android.com/jetpack/compose/setup#sample).
@@ -21,7 +21,13 @@ This sample showcases:
 * Material Design 3 theming and Material You dynamic color
 * UI tests
 
-<img src="screenshots/jetchat.gif"/>
+## Screenshots
+
+<img src="screenshots/screenshots.png"/>
+
+<img src="screenshots/widget.png" width="300"/>
+
+<img src="screenshots/widget_discoverability.png" width="300"/>
 
 ### Status: 🚧 In progress
 
@@ -37,7 +43,7 @@ The [ProfileFragment](app/src/main/java/com/example/compose/jetchat/profile/Prof
 [ViewModel](https://developer.android.com/topic/libraries/architecture/viewmodel), served via [LiveData](https://developer.android.com/topic/libraries/architecture/livedata).
 
 ### Back button handling
-When the Emoji selector is shown, pressing back in the app closes it, intercepting any navigation events. This feature shows a way to integrate Compose and APIs from the Android Framework like [OnBackPressedDispatcherOwner](https://developer.android.com/reference/androidx/activity/OnBackPressedDispatcher) via [Ambients](https://developer.android.com/reference/kotlin/androidx/compose/Ambient). The implementation can be found in [ConversationUiState](app/src/main/java/com/example/compose/jetchat/conversation/BackHandler.kt).
+When the Emoji selector is shown, pressing back in the app closes it, intercepting any navigation events. The implementation can be found in [UserInput](app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt).
 
 ### Text Input and focus management
 When the Emoji panel is shown the keyboard must be hidden and vice versa. This is achieved with a combination of the [FocusRequester](https://developer.android.com/reference/kotlin/androidx/compose/ui/focus/FocusRequester) and [onFocusChanged](https://developer.android.com/reference/kotlin/androidx/compose/ui/focus/package-summary#(androidx.compose.ui.Modifier).onFocusChanged(kotlin.Function1)) APIs.
@@ -48,16 +54,16 @@ This sample uses animations ranging from simple `AnimatedVisibility` in [Functio
 ### Edge-to-edge UI with synchronized IME transitions
 This sample is laid out [edge-to-edge](https://medium.com/androiddevelopers/gesture-navigation-going-edge-to-edge-812f62e4e83e), drawing its content behind the system bars for a more immersive look.
 
-The sample also supports synchronized IME transitions when running on API 30+ devices. See the use of `Modifier.navigationBarsWithImePadding()` in [ConversationContent](app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt).
-
-The sample uses the
-[Accompanist Insets library](https://google.github.io/accompanist/insets/) for WindowInsets support.
+The sample also supports synchronized IME transitions when running on API 30+ devices. See the use of `Modifier.navigationBarsPadding().imePadding()` in [ConversationContent](app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt).
 
 ### Saved state across configuration changes
 Some composable state survives activity or process recreation, like `currentInputSelector` in [UserInput](app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt).
 
 ### Material Design 3 theming and Material You dynamic color
 Jetchat follows the [Material Design 3](https://m3.material.io) principles and uses the `MaterialTheme` composable and M3 components. On Android 12+ Jetchat supports Material You dynamic color, which extracts a custom color scheme from the device wallpaper. Jetchat uses a custom, branded color scheme as a fallback. It also implements custom typography using the Karla and Montserrat font families.
+
+### Nested scrolling interop
+Jetchat contains an example of how to use [`rememberNestedScrollInteropConnection()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#rememberNestedScrollInteropConnection()) to achieve successful nested scroll interop between a View parent that implements `androidx.core.view.NestedScrollingParent3` and a Compose child. The example used here is a combination of a View parent `CoordinatorLayout` and a nested, Compose child `BoxWithConstraints` in [ProfileFragment](app/src/main/java/com/example/compose/jetchat/profile/ProfileFragment.kt). 
 
 ### UI tests
 In [androidTest](app/src/androidTest/java/com/example/compose/jetchat) you'll find a suite of UI tests that showcase interesting patterns in Compose:
@@ -96,4 +102,3 @@ limitations under the License.
 ```
 
 [compose]: https://developer.android.com/jetpack/compose
-[coil-accompanist]: https://google.github.io/accompanist/coil/

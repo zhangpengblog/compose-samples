@@ -16,40 +16,52 @@
 
 package com.example.compose.jetchat.conversation
 
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFrom
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AlternateEmail
-import androidx.compose.material.icons.outlined.Duo
-import androidx.compose.material.icons.outlined.InsertPhoto
-import androidx.compose.material.icons.outlined.Mood
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -60,7 +72,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,14 +83,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
@@ -92,6 +110,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.example.compose.jetchat.video.VideoPlayer
+import kotlin.math.absoluteValue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
 
 enum class InputSelector {
     NONE,
@@ -99,12 +123,12 @@ enum class InputSelector {
     DM,
     EMOJI,
     PHONE,
-    PICTURE
+    PICTURE,
 }
 
 enum class EmojiStickerSelector {
     EMOJI,
-    STICKER
+    STICKER,
 }
 
 @Preview
@@ -119,22 +143,61 @@ fun UserInput(
     onMessageSent: (String) -> Unit,
     modifier: Modifier = Modifier,
     resetScroll: () -> Unit = {},
+    onVideoMessageSent: (videoUri: String, caption: String) -> Unit = { _, _ -> },
 ) {
     var currentInputSelector by rememberSaveable { mutableStateOf(InputSelector.NONE) }
     val dismissKeyboard = { currentInputSelector = InputSelector.NONE }
 
     // Intercept back navigation if there's a InputSelector visible
     if (currentInputSelector != InputSelector.NONE) {
-        BackPressHandler(onBackPressed = dismissKeyboard)
+        BackHandler(onBack = dismissKeyboard)
     }
 
-    var textState by remember { mutableStateOf(TextFieldValue()) }
+    var textState by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue())
+    }
+
+    var attachedVideoUri by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let {
+            attachedVideoUri = it.toString()
+        }
+    }
+
+    val sendMessage = {
+        val currentVideoUri = attachedVideoUri
+        if (currentVideoUri != null) {
+            onVideoMessageSent(currentVideoUri, textState.text.trim())
+            attachedVideoUri = null
+        } else if (textState.text.isNotBlank()) {
+            onMessageSent(textState.text)
+        }
+        textState = TextFieldValue()
+        resetScroll()
+        dismissKeyboard()
+    }
 
     // Used to decide if the keyboard should be shown
     var textFieldFocusState by remember { mutableStateOf(false) }
 
-    Surface(tonalElevation = 2.dp) {
+    Surface(tonalElevation = 2.dp, contentColor = MaterialTheme.colorScheme.secondary) {
         Column(modifier = modifier) {
+            AnimatedVisibility(
+                visible = attachedVideoUri != null,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                attachedVideoUri?.let { videoUri ->
+                    AttachedVideoPreview(
+                        videoUri = videoUri,
+                        onRemove = { attachedVideoUri = null },
+                    )
+                }
+            }
+
             UserInputText(
                 textFieldValue = textState,
                 onTextChanged = { textState = it },
@@ -148,25 +211,61 @@ fun UserInput(
                     }
                     textFieldFocusState = focused
                 },
-                focusState = textFieldFocusState
+                onMessageSent = { sendMessage() },
+                focusState = textFieldFocusState,
             )
             UserInputSelector(
                 onSelectorChange = { currentInputSelector = it },
-                sendMessageEnabled = textState.text.isNotBlank(),
-                onMessageSent = {
-                    onMessageSent(textState.text)
-                    // Reset text field and close keyboard
-                    textState = TextFieldValue()
-                    // Move scroll to bottom
-                    resetScroll()
-                    dismissKeyboard()
+                sendMessageEnabled = textState.text.isNotBlank() || attachedVideoUri != null,
+                onMessageSent = sendMessage,
+                currentInputSelector = currentInputSelector,
+                onVideoClick = {
+                    currentInputSelector = InputSelector.NONE
+                    videoPickerLauncher.launch("video/*")
                 },
-                currentInputSelector = currentInputSelector
             )
             SelectorExpanded(
                 onCloseRequested = dismissKeyboard,
                 onTextAdded = { textState = textState.addText(it) },
-                currentSelector = currentInputSelector
+                currentSelector = currentInputSelector,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachedVideoPreview(videoUri: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+    ) {
+        VideoPlayer(
+            videoUri = videoUri,
+            autoPlay = false,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(12.dp)),
+        )
+
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .size(32.dp)
+                .background(
+                    color = Color.Black.copy(alpha = 0.65f),
+                    shape = CircleShape,
+                ),
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_close),
+                contentDescription = stringResource(id = R.string.remove_attached_video),
+                tint = Color.White,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -176,26 +275,22 @@ private fun TextFieldValue.addText(newString: String): TextFieldValue {
     val newText = this.text.replaceRange(
         this.selection.start,
         this.selection.end,
-        newString
+        newString,
     )
     val newSelection = TextRange(
         start = newText.length,
-        end = newText.length
+        end = newText.length,
     )
 
     return this.copy(text = newText, selection = newSelection)
 }
 
 @Composable
-private fun SelectorExpanded(
-    currentSelector: InputSelector,
-    onCloseRequested: () -> Unit,
-    onTextAdded: (String) -> Unit
-) {
+private fun SelectorExpanded(currentSelector: InputSelector, onCloseRequested: () -> Unit, onTextAdded: (String) -> Unit) {
     if (currentSelector == InputSelector.NONE) return
 
     // Request focus to force the TextField to lose it
-    val focusRequester = FocusRequester()
+    val focusRequester = remember { FocusRequester() }
     // If the selector is shown, always request focus to trigger a TextField.onFocusChange.
     SideEffect {
         if (currentSelector == InputSelector.EMOJI) {
@@ -210,18 +305,17 @@ private fun SelectorExpanded(
             InputSelector.PICTURE -> FunctionalityNotAvailablePanel()
             InputSelector.MAP -> FunctionalityNotAvailablePanel()
             InputSelector.PHONE -> FunctionalityNotAvailablePanel()
-            else -> { throw NotImplementedError() }
+            InputSelector.NONE -> Unit
         }
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun FunctionalityNotAvailablePanel() {
     AnimatedVisibility(
         visibleState = remember { MutableTransitionState(false).apply { targetState = true } },
         enter = expandHorizontally() + fadeIn(),
-        exit = shrinkHorizontally() + fadeOut()
+        exit = shrinkHorizontally() + fadeOut(),
     ) {
         Column(
             modifier = Modifier
@@ -232,13 +326,13 @@ fun FunctionalityNotAvailablePanel() {
         ) {
             Text(
                 text = stringResource(id = R.string.not_available),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = stringResource(id = R.string.not_available_subtitle),
                 modifier = Modifier.paddingFrom(FirstBaseline, before = 32.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -250,50 +344,51 @@ private fun UserInputSelector(
     sendMessageEnabled: Boolean,
     onMessageSent: () -> Unit,
     currentInputSelector: InputSelector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onVideoClick: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
             .height(72.dp)
             .wrapContentHeight()
             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
             onClick = { onSelectorChange(InputSelector.EMOJI) },
-            icon = Icons.Outlined.Mood,
+            icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
-            description = stringResource(id = R.string.emoji_selector_bt_desc)
+            description = stringResource(id = R.string.emoji_selector_bt_desc),
         )
         InputSelectorButton(
             onClick = { onSelectorChange(InputSelector.DM) },
-            icon = Icons.Outlined.AlternateEmail,
+            icon = painterResource(id = R.drawable.ic_alternate_email),
             selected = currentInputSelector == InputSelector.DM,
-            description = stringResource(id = R.string.dm_desc)
+            description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
             onClick = { onSelectorChange(InputSelector.PICTURE) },
-            icon = Icons.Outlined.InsertPhoto,
+            icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
-            description = stringResource(id = R.string.attach_photo_desc)
+            description = stringResource(id = R.string.attach_photo_desc),
         )
         InputSelectorButton(
             onClick = { onSelectorChange(InputSelector.MAP) },
-            icon = Icons.Outlined.Place,
+            icon = painterResource(id = R.drawable.ic_place),
             selected = currentInputSelector == InputSelector.MAP,
-            description = stringResource(id = R.string.map_selector_desc)
+            description = stringResource(id = R.string.map_selector_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PHONE) },
-            icon = Icons.Outlined.Duo,
-            selected = currentInputSelector == InputSelector.PHONE,
-            description = stringResource(id = R.string.videochat_desc)
+            onClick = onVideoClick,
+            icon = painterResource(id = R.drawable.ic_duo),
+            selected = false,
+            description = stringResource(id = R.string.videochat_desc),
         )
 
         val border = if (!sendMessageEnabled) {
             BorderStroke(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
             )
         } else {
             null
@@ -304,7 +399,7 @@ private fun UserInputSelector(
 
         val buttonColors = ButtonDefaults.buttonColors(
             disabledContainerColor = Color.Transparent,
-            disabledContentColor = disabledContentColor
+            disabledContentColor = disabledContentColor,
         )
 
         // Send button
@@ -314,11 +409,11 @@ private fun UserInputSelector(
             onClick = onMessageSent,
             colors = buttonColors,
             border = border,
-            contentPadding = PaddingValues(0.dp)
+            contentPadding = PaddingValues(0.dp),
         ) {
             Text(
                 stringResource(id = R.string.send),
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
     }
@@ -327,32 +422,35 @@ private fun UserInputSelector(
 @Composable
 private fun InputSelectorButton(
     onClick: () -> Unit,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     description: String,
-    selected: Boolean
+    selected: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val backgroundModifier = if (selected) {
         Modifier.background(
-            color = MaterialTheme.colorScheme.secondary,
-            shape = RoundedCornerShape(14.dp)
+            color = LocalContentColor.current,
+            shape = RoundedCornerShape(14.dp),
         )
     } else {
         Modifier
     }
     IconButton(
         onClick = onClick,
-        modifier = backgroundModifier
+        modifier = modifier.then(backgroundModifier),
     ) {
         val tint = if (selected) {
-            MaterialTheme.colorScheme.onSecondary
+            contentColorFor(backgroundColor = LocalContentColor.current)
         } else {
-            MaterialTheme.colorScheme.secondary
+            LocalContentColor.current
         }
         Icon(
             icon,
             tint = tint,
-            modifier = Modifier.padding(16.dp),
-            contentDescription = description
+            modifier = Modifier
+                .padding(8.dp)
+                .size(56.dp),
+            contentDescription = description,
         )
     }
 }
@@ -365,6 +463,7 @@ private fun NotAvailablePopup(onDismissed: () -> Unit) {
 val KeyboardShownKey = SemanticsPropertyKey<Boolean>("KeyboardShownKey")
 var SemanticsPropertyReceiver.keyboardShownProperty by KeyboardShownKey
 
+@OptIn(ExperimentalAnimationApi::class)
 @ExperimentalFoundationApi
 @Composable
 private fun UserInputText(
@@ -373,70 +472,180 @@ private fun UserInputText(
     textFieldValue: TextFieldValue,
     keyboardShown: Boolean,
     onTextFieldFocused: (Boolean) -> Unit,
-    focusState: Boolean
+    onMessageSent: (String) -> Unit,
+    focusState: Boolean,
 ) {
+    val swipeOffset = remember { mutableStateOf(0f) }
+    var isRecordingMessage by remember { mutableStateOf(false) }
     val a11ylabel = stringResource(id = R.string.textfield_desc)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .semantics {
-                contentDescription = a11ylabel
-                keyboardShownProperty = keyboardShown
-            },
-        horizontalArrangement = Arrangement.End
+            .height(64.dp),
+        horizontalArrangement = Arrangement.End,
     ) {
-        Surface {
-            Box(
-                modifier = Modifier
-                    .height(64.dp)
-                    .weight(1f)
-                    .align(Alignment.Bottom)
-            ) {
-                var lastFocusState by remember { mutableStateOf(false) }
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { onTextChanged(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 32.dp)
-                        .align(Alignment.CenterStart)
-                        .onFocusChanged { state ->
-                            if (lastFocusState != state.isFocused) {
-                                onTextFieldFocused(state.isFocused)
-                            }
-                            lastFocusState = state.isFocused
+        AnimatedContent(
+            targetState = isRecordingMessage,
+            label = "text-field",
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+        ) { recording ->
+            Box(Modifier.fillMaxSize()) {
+                if (recording) {
+                    RecordingIndicator { swipeOffset.value }
+                } else {
+                    UserInputTextField(
+                        textFieldValue,
+                        onTextChanged,
+                        onTextFieldFocused,
+                        keyboardType,
+                        focusState,
+                        onMessageSent,
+                        Modifier.fillMaxWidth().semantics {
+                            contentDescription = a11ylabel
+                            keyboardShownProperty = keyboardShown
                         },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = keyboardType,
-                        imeAction = ImeAction.Send
-                    ),
-                    maxLines = 1,
-                    cursorBrush = SolidColor(LocalContentColor.current),
-                    textStyle = LocalTextStyle.current.copy(color = LocalContentColor.current)
-                )
-
-                val disableContentColor =
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                if (textFieldValue.text.isEmpty() && !focusState) {
-                    Text(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 32.dp),
-                        text = stringResource(id = R.string.textfield_hint),
-                        style = MaterialTheme.typography.bodyLarge.copy(color = disableContentColor)
                     )
                 }
             }
+        }
+        RecordButton(
+            recording = isRecordingMessage,
+            swipeOffset = { swipeOffset.value },
+            onSwipeOffsetChange = { offset -> swipeOffset.value = offset },
+            onStartRecording = {
+                val consumed = !isRecordingMessage
+                isRecordingMessage = true
+                consumed
+            },
+            onFinishRecording = {
+                // handle end of recording
+                isRecordingMessage = false
+            },
+            onCancelRecording = {
+                isRecordingMessage = false
+            },
+            modifier = Modifier.fillMaxHeight(),
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.UserInputTextField(
+    textFieldValue: TextFieldValue,
+    onTextChanged: (TextFieldValue) -> Unit,
+    onTextFieldFocused: (Boolean) -> Unit,
+    keyboardType: KeyboardType,
+    focusState: Boolean,
+    onMessageSent: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var lastFocusState by remember { mutableStateOf(false) }
+    BasicTextField(
+        value = textFieldValue,
+        onValueChange = { onTextChanged(it) },
+        modifier = modifier
+            .padding(start = 32.dp)
+            .align(Alignment.CenterStart)
+            .onFocusChanged { state ->
+                if (lastFocusState != state.isFocused) {
+                    onTextFieldFocused(state.isFocused)
+                }
+                lastFocusState = state.isFocused
+            },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = ImeAction.Send,
+        ),
+        keyboardActions = KeyboardActions {
+            if (textFieldValue.text.isNotBlank()) onMessageSent(textFieldValue.text)
+        },
+        maxLines = 1,
+        cursorBrush = SolidColor(LocalContentColor.current),
+        textStyle = LocalTextStyle.current.copy(color = LocalContentColor.current),
+    )
+
+    val disableContentColor =
+        MaterialTheme.colorScheme.onSurfaceVariant
+    if (textFieldValue.text.isEmpty() && !focusState) {
+        Text(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 32.dp),
+            text = stringResource(R.string.textfield_hint),
+            style = MaterialTheme.typography.bodyLarge.copy(color = disableContentColor),
+        )
+    }
+}
+
+@Composable
+private fun RecordingIndicator(swipeOffset: () -> Float) {
+    var duration by remember { mutableStateOf(Duration.ZERO) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000.milliseconds)
+            duration += 1.seconds
+        }
+    }
+    Row(
+        Modifier.fillMaxSize(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+
+        val animatedPulse = infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.2f,
+            animationSpec = infiniteRepeatable(
+                tween(2000),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse",
+        )
+        Box(
+            Modifier
+                .size(56.dp)
+                .padding(24.dp)
+                .graphicsLayer {
+                    scaleX = animatedPulse.value
+                    scaleY = animatedPulse.value
+                }
+                .clip(CircleShape)
+                .background(Color.Red),
+        )
+        Text(
+            duration.toComponents { minutes, seconds, _ ->
+                val min = minutes.toString().padStart(2, '0')
+                val sec = seconds.toString().padStart(2, '0')
+                "$min:$sec"
+            },
+            Modifier.alignByBaseline(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .alignByBaseline()
+                .clipToBounds(),
+        ) {
+            val swipeThreshold = with(LocalDensity.current) { 200.dp.toPx() }
+            Text(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .graphicsLayer {
+                        translationX = swipeOffset() / 2
+                        alpha = 1 - (swipeOffset().absoluteValue / swipeThreshold)
+                    },
+                textAlign = TextAlign.Center,
+                text = stringResource(R.string.swipe_to_cancel_recording),
+                style = MaterialTheme.typography.bodyLarge,
+            )
         }
     }
 }
 
 @Composable
-fun EmojiSelector(
-    onTextAdded: (String) -> Unit,
-    focusRequester: FocusRequester
-) {
+fun EmojiSelector(onTextAdded: (String) -> Unit, focusRequester: FocusRequester) {
     var selected by remember { mutableStateOf(EmojiStickerSelector.EMOJI) }
 
     val a11yLabel = stringResource(id = R.string.emoji_selector_desc)
@@ -445,24 +654,24 @@ fun EmojiSelector(
             .focusRequester(focusRequester) // Requests focus when the Emoji selector is displayed
             // Make the emoji selector focusable so it can steal focus from TextField
             .focusTarget()
-            .semantics { contentDescription = a11yLabel }
+            .semantics { contentDescription = a11yLabel },
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 8.dp),
         ) {
             ExtendedSelectorInnerButton(
                 text = stringResource(id = R.string.emojis_label),
                 onClick = { selected = EmojiStickerSelector.EMOJI },
                 selected = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             ExtendedSelectorInnerButton(
                 text = stringResource(id = R.string.stickers_label),
                 onClick = { selected = EmojiStickerSelector.STICKER },
                 selected = false,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
         Row(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -475,44 +684,36 @@ fun EmojiSelector(
 }
 
 @Composable
-fun ExtendedSelectorInnerButton(
-    text: String,
-    onClick: () -> Unit,
-    selected: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun ExtendedSelectorInnerButton(text: String, onClick: () -> Unit, selected: Boolean, modifier: Modifier = Modifier) {
     val colors = ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+        containerColor = if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        else Color.Transparent,
         disabledContainerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f)
+        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f),
     )
     TextButton(
         onClick = onClick,
         modifier = modifier
             .padding(8.dp)
             .height(36.dp),
-        enabled = selected,
         colors = colors,
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(0.dp),
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.titleSmall
+            style = MaterialTheme.typography.titleSmall,
         )
     }
 }
 
 @Composable
-fun EmojiTable(
-    onTextAdded: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth()) {
         repeat(4) { x ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 repeat(EMOJI_COLUMNS) { y ->
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
@@ -524,8 +725,8 @@ fun EmojiTable(
                         text = emoji,
                         style = LocalTextStyle.current.copy(
                             fontSize = 18.sp,
-                            textAlign = TextAlign.Center
-                        )
+                            textAlign = TextAlign.Center,
+                        ),
                     )
                 }
             }
@@ -663,5 +864,5 @@ private val emojis = listOf(
     "\ud83d\udc6b", // Man and Woman Holding Hands
     "\ud83d\udc6c", // Two Men Holding Hands
     "\ud83d\udc6d", // Two Women Holding Hands
-    "\ud83d\udc8f" // Kiss
+    "\ud83d\udc8f", // Kiss
 )

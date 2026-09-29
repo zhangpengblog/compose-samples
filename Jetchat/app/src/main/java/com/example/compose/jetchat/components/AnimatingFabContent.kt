@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.util.lerp
 import kotlin.math.roundToInt
@@ -39,28 +40,29 @@ fun AnimatingFabContent(
     icon: @Composable () -> Unit,
     text: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    extended: Boolean = true
+    extended: Boolean = true,
 ) {
     val currentState = if (extended) ExpandableFabStates.Extended else ExpandableFabStates.Collapsed
-    val transition = updateTransition(currentState)
+    val transition = updateTransition(currentState, "fab_transition")
 
     val textOpacity by transition.animateFloat(
         transitionSpec = {
             if (targetState == ExpandableFabStates.Collapsed) {
                 tween(
                     easing = LinearEasing,
-                    durationMillis = (transitionDuration / 12f * 5).roundToInt() // 5 / 12 frames
+                    durationMillis = (transitionDuration / 12f * 5).roundToInt(), // 5 / 12 frames
                 )
             } else {
                 tween(
                     easing = LinearEasing,
                     delayMillis = (transitionDuration / 3f).roundToInt(), // 4 / 12 frames
-                    durationMillis = (transitionDuration / 12f * 5).roundToInt() // 5 / 12 frames
+                    durationMillis = (transitionDuration / 12f * 5).roundToInt(), // 5 / 12 frames
                 )
             }
-        }
-    ) { progress ->
-        if (progress == ExpandableFabStates.Collapsed) {
+        },
+        label = "fab_text_opacity",
+    ) { state ->
+        if (state == ExpandableFabStates.Collapsed) {
             0f
         } else {
             1f
@@ -71,29 +73,31 @@ fun AnimatingFabContent(
             if (targetState == ExpandableFabStates.Collapsed) {
                 tween(
                     easing = FastOutSlowInEasing,
-                    durationMillis = transitionDuration
+                    durationMillis = transitionDuration,
                 )
             } else {
                 tween(
                     easing = FastOutSlowInEasing,
-                    durationMillis = transitionDuration
+                    durationMillis = transitionDuration,
                 )
             }
-        }
-    ) { progress ->
-        if (progress == ExpandableFabStates.Collapsed) {
+        },
+        label = "fab_width_factor",
+    ) { state ->
+        if (state == ExpandableFabStates.Collapsed) {
             0f
         } else {
             1f
         }
     }
-    // Using functions instead of Floats here can improve performance, preventing recompositions.
+    // Deferring reads using lambdas instead of Floats here can improve performance,
+    // preventing recompositions.
     IconAndTextRow(
         icon,
         text,
         { textOpacity },
         { fabWidthFactor },
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -101,18 +105,18 @@ fun AnimatingFabContent(
 private fun IconAndTextRow(
     icon: @Composable () -> Unit,
     text: @Composable () -> Unit,
-    opacityProgress: () -> Float, // Functions instead of Floats, to slightly improve performance
+    opacityProgress: () -> Float, // Lambdas instead of Floats, to defer read
     widthProgress: () -> Float,
-    modifier: Modifier
+    modifier: Modifier,
 ) {
     Layout(
         modifier = modifier,
         content = {
             icon()
-            Box(modifier = Modifier.alpha(opacityProgress())) {
+            Box(modifier = Modifier.graphicsLayer { alpha = opacityProgress() }) {
                 text()
             }
-        }
+        },
     ) { measurables, constraints ->
 
         val iconPlaceable = measurables[0].measure(constraints)
@@ -135,11 +139,11 @@ private fun IconAndTextRow(
         layout(width.roundToInt(), height) {
             iconPlaceable.place(
                 iconPadding.roundToInt(),
-                constraints.maxHeight / 2 - iconPlaceable.height / 2
+                constraints.maxHeight / 2 - iconPlaceable.height / 2,
             )
             textPlaceable.place(
                 (iconPlaceable.width + iconPadding * 2).roundToInt(),
-                constraints.maxHeight / 2 - textPlaceable.height / 2
+                constraints.maxHeight / 2 - textPlaceable.height / 2,
             )
         }
     }

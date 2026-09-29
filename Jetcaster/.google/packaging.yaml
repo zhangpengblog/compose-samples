@@ -18,12 +18,23 @@
 # End users may safely ignore this file. It has no relevance to other systems.
 ---
 status:       PUBLISHED
-technologies: [Android]
-categories:   [Compose]
+technologies: [Android, JetpackCompose, Coroutines]
+categories:
+    - AndroidArchitectureUILayer
+    - JetpackComposeDesignSystems
+    - JetpackComposeAnimation
+    - Android TV
 languages:    [Kotlin]
-solutions:    [Mobile]
+solutions:
+    - Mobile
+    - Flow
+    - JetpackRoom
+    - JetpackLifecycle
+    - JetpackNavigation
+    - TV
 github:       android/compose-samples
 level:        ADVANCED
 apiRefs:
     - android:androidx.compose.Composable
+    - android:androidx.tv.material3
 license: apache2

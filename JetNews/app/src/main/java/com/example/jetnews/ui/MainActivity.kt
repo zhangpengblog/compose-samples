@@ -17,22 +17,44 @@
 package com.example.jetnews.ui
 
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.example.jetnews.JetnewsApplication
-import com.example.jetnews.utils.rememberWindowSizeClass
+import com.example.jetnews.deeplink.handleDeepLink
+import com.example.jetnews.ui.home.HomeKey
+import com.example.jetnews.ui.navigation.rememberInitialBackStack
+import com.example.jetnews.ui.utils.NewIntentEffect
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val appContainer = (application as JetnewsApplication).container
         setContent {
-            val windowSizeClass = rememberWindowSizeClass()
-            JetnewsApp(appContainer, windowSizeClass)
+            val initialDeepLinkBackStack = remember { intent.data?.handleDeepLink() }
+            var isOpenedByDeepLink by rememberSaveable { mutableStateOf(initialDeepLinkBackStack != null) }
+            var initialBackStack by rememberInitialBackStack(initialDeepLinkBackStack ?: listOf(HomeKey))
+
+            NewIntentEffect { newIntent ->
+                newIntent.data?.handleDeepLink()?.let { deepLinkBackStack ->
+                    isOpenedByDeepLink = true
+                    initialBackStack = deepLinkBackStack
+                }
+            }
+
+            JetnewsApp(
+                appContainer,
+                isBackEnabled = !isOpenedByDeepLink || isTaskRoot,
+                initialBackStack,
+            )
         }
     }
 }

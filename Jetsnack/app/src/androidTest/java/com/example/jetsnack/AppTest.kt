@@ -17,12 +17,10 @@
 package com.example.jetsnack
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.example.jetsnack.ui.JetsnackApp
 import com.example.jetsnack.ui.MainActivity
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -30,13 +28,6 @@ class AppTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
-
-    @Before
-    fun setUp() {
-        composeTestRule.setContent {
-            JetsnackApp()
-        }
-    }
 
     @Test
     fun app_launches() {
